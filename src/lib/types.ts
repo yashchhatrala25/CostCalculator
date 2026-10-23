@@ -4,9 +4,20 @@ export type Marketplace = 'amazon' | 'flipkart' | 'meesho';
 
 export type CalculationMode = 'costToPrice' | 'priceToProfit';
 
+export type DesiredProfitType = 'amount' | 'marginPercent';
+
 export type GSTRate = 0 | 5 | 12 | 18 | 28;
 
-export type ReturnLossType = 'percentage' | 'fixed';
+export type ReturnLossMode = 'simple' | 'detailed';
+
+export type SimpleReturnType = 'percentage' | 'fixed';
+
+// ─── Category Preset ───────────────────────────────────────────────────────
+
+export interface CategoryPreset {
+  name: string;
+  commission: number;
+}
 
 // ─── Marketplace Configuration ─────────────────────────────────────────────
 
@@ -20,8 +31,9 @@ export interface MarketplaceConfig {
   commissionEditable: boolean;
   color: string;
   gradient: string;
-  icon: string; // emoji or identifier
+  icon: string;
   description: string;
+  categoryPresets: CategoryPreset[];
 }
 
 // ─── Calculator Input State ────────────────────────────────────────────────
@@ -33,6 +45,7 @@ export interface CalculatorInputs {
   // Product details
   productCost: number; // buying/manufacturing cost in ₹
   sellingPrice: number; // customer selling price (Mode B) in ₹
+  desiredProfitType: DesiredProfitType; // Mode A: ₹ amount or % margin
   desiredProfit: number; // desired profit amount (Mode A) in ₹
   desiredProfitPercent: number; // desired profit % (Mode A)
 
@@ -48,19 +61,26 @@ export interface CalculatorInputs {
   packagingCost: number;
   advertisingCost: number;
 
-  // Return/RTO
-  returnLossType: ReturnLossType;
-  returnLossPercent: number;
-  returnLossFixed: number;
+  // Return & Courier RTO
+  returnLossMode: ReturnLossMode; // 'simple' | 'detailed'
+  // Simple mode:
+  simpleReturnType: SimpleReturnType; // 'percentage' | 'fixed'
+  simpleReturnPercent: number; // % of selling price
+  simpleReturnFixed: number; // fixed ₹ per order
+  // Detailed mode (differentiating Customer Return vs Courier RTO):
+  customerReturnRate: number; // % of orders that are customer returns
+  customerReturnCost: number; // ₹ loss per customer return (reverse shipping + damaged goods)
+  courierRTORate: number; // % of orders that are courier RTO (undelivered/rejected)
+  courierRTOCost: number; // ₹ loss per courier RTO (forward/return freight loss)
 }
 
 // ─── Calculation Results ───────────────────────────────────────────────────
 
 export interface CalculationResult {
   // Selling price
-  sellingPrice: number; // GST-inclusive customer price
-  salesExcludingGST: number;
-  gstAmount: number;
+  sellingPrice: number; // GST-inclusive customer price (P)
+  salesExcludingGST: number; // P / (1 + g)
+  gstAmount: number; // P - salesExcludingGST
 
   // Marketplace fees (before GST on fees)
   commissionAmount: number;
@@ -74,12 +94,17 @@ export interface CalculationResult {
   productCost: number;
   packagingCost: number;
   advertisingCost: number;
-  returnLossBuffer: number;
+
+  // Return & RTO Breakdown
+  customerReturnBuffer: number; // per unit loss
+  courierRTOBuffer: number; // per unit loss
+  returnLossBuffer: number; // total return/RTO buffer per unit
 
   // Totals
   totalDeductions: number;
   netProfit: number;
   profitPercent: number; // profit as % of selling price
+  profitOnCostPercent: number; // profit as % of product cost (ROI)
 
   // Recommended selling price (Mode A)
   recommendedSellingPrice: number;
@@ -92,14 +117,6 @@ export interface SellerDetails {
   gstin: string;
   itemName: string;
   itemSKU: string;
-}
-
-// ─── Breakdown Item for display ────────────────────────────────────────────
-
-export interface BreakdownItem {
-  label: string;
-  value: number;
-  type: 'income' | 'deduction' | 'neutral' | 'result';
-  tooltip?: string;
-  isSubItem?: boolean;
+  invoiceNumber: string;
+  orderDate: string;
 }

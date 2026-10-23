@@ -19,6 +19,8 @@ export default function Home() {
     gstin: '',
     itemName: '',
     itemSKU: '',
+    invoiceNumber: '',
+    orderDate: '',
   });
 
   // Memoized calculation
